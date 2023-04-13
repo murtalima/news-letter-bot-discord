@@ -1,29 +1,36 @@
 import asyncio
 import os
-import time
 import discord
+
+from views import MyView
+from discord.ext import commands
+from discord import app_commands
 from dotenv import load_dotenv
 from backendProvider import BackendProvider
-
-intents = discord.Intents.default()
-intents.message_content = True
-
+from helpers import make_members_roll
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 
+intents = discord.Intents.default()
+intents.message_content = True
 client = discord.Client(intents=intents)
-
+tree = app_commands.CommandTree(client)
 backendProvider = BackendProvider(3000, '192.168.0.18')
 
+@tree.command(name = "hello", description = "Fala hello", guild=discord.Object(id=451143076983865344))
+async def first_command(interaction):
+    await interaction.response.send_message("Hello!")
 
-@client.event
-async def on_ready():
-    print(f'{client.user} has connected to Discord!')
-    backendProvider.createUser(360209386682974208, 'Primata(MacacoLima)', True, False, client.guilds[0])
-
-    for guild in client.guilds:
-        backendProvider.createGuild(guild.id, guild.name, guild.member_count)
-
+@tree.command(name = "news", description = "Busca noticias do newsletters", guild=discord.Object(id=451143076983865344))
+async def news(interaction):
+    response=backendProvider.getNewspaper(interaction.user.id)
+    if(response.status_code == 200):
+        content =response.json()['content']
+        embed = discord.Embed(
+                    description=content,
+                    color= discord.Color.blue()
+                )
+        await interaction.response.send_message(embed=embed, view=MyView())
 
 @client.event
 async def on_voice_state_update(member, before, after):
@@ -33,13 +40,8 @@ async def on_voice_state_update(member, before, after):
         response_json = response.json()
 
         if not any(str(member.guild.id) in guild['discordId'] for guild in response_json['guilds']):
-            backendProvider.updateUser(
-                response_json['discordId'],
-                response_json['name'],
-                response_json['isAdm'],
-                response_json['isMuted'],
-                member.guild.id
-            )
+            print('a')
+            backendProvider.addGuildUsers(member.id, member.guild.id)
 
         user = response.json()
 
@@ -51,7 +53,6 @@ async def on_voice_state_update(member, before, after):
     if response.status_code == 404:
         backendProvider.createUser(member.id, member.name, False, False, member.guild.id)
 
-
 @client.event
 async def on_message(message):
     response = backendProvider.findUser(message.author.id)
@@ -60,30 +61,20 @@ async def on_message(message):
         user = response.json()
         
         if not any(str(message.guild.id) in guild['discordId'] for guild in user['guilds']):
-            backendProvider.updateUser(
-                user['discordId'],
-                user['name'],
-                user['isAdm'],
-                user['isMuted'],
-                message.guild.id
-            )
-
+            backendProvider.addGuildUsers(message.author.id, message.guild.id)
+            
         is_user_adm = user['isAdm']
+        
         if is_user_adm:
-            if message.content.startswith('$'):
-                await message.delete()
-
-            if message.content.startswith('$hello'):
-                await message.channel.send('Hello')
-
             if message.content.startswith('$roda roda'):
-                await asyncio.gather(teste(message))
+                await asyncio.gather(make_members_roll(message))
 
             if message.content.startswith('$nao fala comigo'):
                 for member in message.mentions:
                     if response.status_code == 200:
+                        response = backendProvider.findUser(member.id)
                         user = response.json()
-                        backendProvider.updateUser(member.id, member.name, user['isAdm'], True)
+                        backendProvider.updateUser(member.id, member.name, False, True)
 
                         try:
                             await member.edit(mute=True, deafen=True)
@@ -96,7 +87,7 @@ async def on_message(message):
                 for member in message.mentions:
                     if response.status_code == 200:
                         user = response.json()
-                        backendProvider.updateUser(member.id, member.name, user['isAdm'], False)
+                        backendProvider.updateUser(member.id, member.name, False, False)
                         try:
                             await member.edit(mute=False, deafen=False)
                         except:
@@ -135,18 +126,17 @@ async def on_message(message):
                     elif response.status_code == 404:
                         backendProvider.createUser(member.id, member.name, False, False)
 
+            
     print(message.author.id, message.author.name, ' -> ', message.content)
 
+@client.event
+async def on_ready():
+    await tree.sync(guild=discord.Object(id=451143076983865344))
+    print(f'{client.user} has connected to Discord!')
+    backendProvider.createUser(360209386682974208, 'Primata(MacacoLima)', True, False, client.guilds[0])
 
-async def teste(message):
-    for member in message.mentions:
-        await roller(member=member, guild=message.guild)
-
-
-async def roller(member, guild):
-    for channel in guild.voice_channels:
-        await member.move_to(channel=channel)
-        time.sleep(0.4)
+    for guild in client.guilds:
+        res = backendProvider.createGuild(guild.id, guild.name, guild.member_count)
 
 
 client.run(TOKEN)

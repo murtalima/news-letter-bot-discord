@@ -7,7 +7,8 @@ class BackendProvider:
         self.url = 'http://' + self.ip + ':' + str(self.port)+ '/'
         self.endpoints = {
             'users': self.url + 'users/',
-            'guilds': self.url + 'guilds/'
+            'guilds': self.url + 'guilds/',
+            'newspapers': self.url + 'newspapers'
         }
 
     def createUser(self, discord_id, name, is_adm, is_muted, guild_id):
@@ -26,13 +27,12 @@ class BackendProvider:
     def findUser(self, discord_id):
         return req.get(url=self.endpoints['users'] + str(discord_id))
 
-    def updateUser(self, discord_id, name, is_adm, is_muted, guild_id):
+    def updateUser(self, discord_id, name, is_adm, is_muted):
         body = {
             "discordId": str(discord_id),
             "name": name,
             "isAdm": is_adm,
             "isMuted": is_muted,
-            "guildId": str(guild_id)
         }
 
         return req.put(url=self.endpoints['users'] + str(discord_id) , json=body )
@@ -59,3 +59,9 @@ class BackendProvider:
         }
 
         return req.put(url=self.endpoints['guilds'] + str(discord_id), json=body)
+    
+    def getNewspaper(self, discord_id):
+        return req.get(url=self.endpoints['newspapers'] + '/user/' + str(discord_id))
+
+    def addGuildUsers(self, user_id, guild_id):
+        return req.post(url=self.endpoints['users']+ str(user_id) + '/guild' , json= {  "guildId": str(guild_id)})
