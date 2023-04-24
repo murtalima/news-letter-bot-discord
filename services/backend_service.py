@@ -1,6 +1,6 @@
 import requests as req
 
-class BackendProvider:
+class BackendService:
     def __init__(self, port, ip):
         self.port = port
         self.ip = ip
@@ -19,6 +19,7 @@ class BackendProvider:
             "isMuted": is_muted,
             "guildId": str(guild_id)
         }
+        
         return req.post(url=self.endpoints['users'], json=body)
 
     def deleteUser(self, discord_id):
@@ -29,7 +30,6 @@ class BackendProvider:
 
     def updateUser(self, discord_id, name, is_adm, is_muted):
         body = {
-            "discordId": str(discord_id),
             "name": name,
             "isAdm": is_adm,
             "isMuted": is_muted,
@@ -43,6 +43,7 @@ class BackendProvider:
             "name": name,
             "membersCount": members_count
         }
+        
         return req.post(url=self.endpoints['guilds'], json=body)
 
     def deleteGuild(self, discord_id):
@@ -65,3 +66,6 @@ class BackendProvider:
 
     def addGuildUsers(self, user_id, guild_id):
         return req.post(url=self.endpoints['users']+ str(user_id) + '/guild' , json= {  "guildId": str(guild_id)})
+
+    def gradeNewspaper(self, user_id, newspaper_id, grade):
+        return req.post(url=self.endpoints['newspapers'] + '/' + str(newspaper_id) + '/user/' + str(user_id), params={ "grade": grade})
