@@ -1,14 +1,16 @@
+import os
 from typing import Optional
 import discord
+from dotenv import load_dotenv
 from ..backend_service import BackendService
+load_dotenv()
+BACKEND_URL = os.getenv('BACKEND_URL')  
 
 class NewsView(discord.ui.View):   
     
     @discord.ui.button(label="Like", row=0, style=discord.ButtonStyle.green)
     async def first_button_callback(self, interaction, button):
-        backend_provider = BackendService(3000, '192.168.0.18')
-        
-        embed = interaction.message.embeds[0]
+        backend_provider = BackendService(3000, BACKEND_URL)
         
         id = interaction.message.embeds[0].fields[3].value
         response = backend_provider.gradeNewspaper(interaction.user.id, id, 'Like')
