@@ -9,13 +9,14 @@ from events.on_message_event import OnMessageEvent
 from services.commands_service import CommandsService
 
 load_dotenv()
+BACKEND_URL = os.getenv('BACKEND_URL')
 TOKEN = os.getenv('DISCORD_TOKEN')
 
 intents = discord.Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
-backend_service = BackendService(3000, '192.168.0.18')
+backend_service = BackendService(3000, BACKEND_URL)
 on_message_event = OnMessageEvent(backend_service=backend_service)
 on_voice_state_update_event = OnVoiceStateUpdateEvent(backend_service=backend_service)
 commands = CommandsService(backend_service=backend_service)
